@@ -159,45 +159,66 @@ document.getElementById("formulario")
 
 dibujar();
 </script>
+
 function exportarCopia() {
   try {
     const datos = localStorage.getItem("mi-despensa-productos-v1");
 
     if (datos === null) {
-      alert("No se encontraron datos en este almacenamiento.");
+      alert("No se encontraron productos guardados en este almacenamiento.");
       return;
     }
 
-    const archivo = new Blob([datos], {
-      type: "application/json"
-    });
+    const cuadro = document.createElement("textarea");
+    cuadro.value = JSON.stringify({
+      version: 1,
+      productos: JSON.parse(datos)
+    }, null, 2);
 
-    const url = URL.createObjectURL(archivo);
-    const enlace = document.createElement("a");
+    cuadro.readOnly = true;
+    cuadro.style.width = "100%";
+    cuadro.style.height = "180px";
+    cuadro.style.marginTop = "12px";
+    cuadro.style.boxSizing = "border-box";
 
-    enlace.href = url;
-    enlace.download = "copia-mi-despensa.json";
-    enlace.style.display = "none";
+    let zona = document.getElementById("zona-copia");
 
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
+    if (!zona) {
+      zona = document.createElement("section");
+      zona.id = "zona-copia";
+      zona.className = "panel";
+      document.body.appendChild(zona);
+    }
 
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    zona.replaceChildren();
+
+    const titulo = document.createElement("h2");
+    titulo.textContent = "Copia de seguridad";
+    zona.appendChild(titulo);
+
+    const ayuda = document.createElement("p");
+    ayuda.textContent =
+      "Mantén pulsado el texto, selecciona todo y pulsa Copiar. Guarda este texto en un lugar seguro.";
+    zona.appendChild(ayuda);
+
+    zona.appendChild(cuadro);
+    cuadro.focus();
+    cuadro.select();
   } catch (error) {
-    alert("No se pudo crear la copia. No se han borrado tus productos.");
+    alert("No se pudo preparar la copia. Tus productos no se han borrado.");
   }
 }
 
 const botonCopia = document.createElement("button");
 botonCopia.type = "button";
-botonCopia.textContent = "Exportar copia de seguridad";
+botonCopia.textContent = "Mostrar copia de seguridad";
 botonCopia.style.display = "block";
 botonCopia.style.width = "100%";
 botonCopia.style.margin = "16px 0";
 botonCopia.addEventListener("click", exportarCopia);
 
-document.body.appendChild(botonCopia);  
+document.body.appendChild(botonCopia);
+  
 
 <script>
 if ("serviceWorker" in navigator) {
