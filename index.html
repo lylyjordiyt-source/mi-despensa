@@ -160,35 +160,44 @@ document.getElementById("formulario")
 dibujar();
 </script>
 function exportarCopia() {
-  const copia = {
-    version: 1,
-    fecha: new Date().toISOString(),
-    productos: JSON.parse(
-      localStorage.getItem("mi-despensa-productos-v1") || "[]"
-    )
-  };
+  try {
+    const datos = localStorage.getItem("mi-despensa-productos-v1");
 
-  const archivo = new Blob(
-    [JSON.stringify(copia, null, 2)],
-    { type: "application/json" }
-  );
+    if (datos === null) {
+      alert("No se encontraron datos en este almacenamiento.");
+      return;
+    }
 
-  const url = URL.createObjectURL(archivo);
-  const enlace = document.createElement("a");
-  enlace.href = url;
-  enlace.download = "copia-mi-despensa.json";
-  enlace.click();
+    const archivo = new Blob([datos], {
+      type: "application/json"
+    });
 
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const url = URL.createObjectURL(archivo);
+    const enlace = document.createElement("a");
+
+    enlace.href = url;
+    enlace.download = "copia-mi-despensa.json";
+    enlace.style.display = "none";
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (error) {
+    alert("No se pudo crear la copia. No se han borrado tus productos.");
+  }
 }
 
 const botonCopia = document.createElement("button");
-botonCopia.textContent = "💾 Exportar copia de seguridad";
+botonCopia.type = "button";
+botonCopia.textContent = "Exportar copia de seguridad";
+botonCopia.style.display = "block";
 botonCopia.style.width = "100%";
-botonCopia.style.margin = "10px 0";
+botonCopia.style.margin = "16px 0";
 botonCopia.addEventListener("click", exportarCopia);
 
-document.querySelector("body").appendChild(botonCopia);  
+document.body.appendChild(botonCopia);  
 
 <script>
 if ("serviceWorker" in navigator) {
