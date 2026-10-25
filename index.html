@@ -233,10 +233,42 @@ botonImportar.addEventListener("click", () => {
       throw new Error("Inventario actual no válido");
     }
 
-    if (actuales.length > 0) {
-      estadoImportacion.textContent =
-        "El inventario ya contiene productos. No se ha importado nada para evitar sobrescribirlos.";
-      return;
+    
+const nombresActuales = new Set(
+  actuales.map(p => p.nombre.trim().toLowerCase())
+);
+
+const paraAñadir = nuevos.filter(p =>
+  !nombresActuales.has(p.nombre.trim().toLowerCase())
+);
+
+const confirmacion = confirm(
+  "Se añadirán " + paraAñadir.length +
+  " productos nuevos. Los que ya existen se conservarán sin cambios. ¿Continuar?"
+);
+
+if (!confirmacion) return;
+
+productos = [
+  ...actuales,
+  ...paraAñadir.map(p => ({
+    id: p.id && !actuales.some(a => a.id === p.id)
+      ? p.id
+      : crypto.randomUUID(),
+    nombre: p.nombre,
+    cantidad: Number(p.cantidad)
+  }))
+];
+
+localStorage.setItem(CLAVE, JSON.stringify(productos));
+dibujar();
+
+estadoImportacion.textContent =
+  "Importación terminada. Productos nuevos añadidos: " +
+  paraAñadir.length +
+  ". Los que ya existían se han conservado.";
+return;
+
     }
 
     productos = nuevos.map(p => ({
