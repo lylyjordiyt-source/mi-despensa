@@ -54,6 +54,17 @@ form button{width:100%}
   <div id="inventario"></div>
 </section>
 
+<section class="panel">
+  <h2>💾 Copia de seguridad</h2>
+  <button type="button" id="exportarCopia">
+    Mostrar mis productos para copiar
+  </button>
+  <textarea id="textoCopia"
+    rows="8"
+    readonly
+    placeholder="Tu copia aparecerá aquí"></textarea>
+</section>
+
 <p class="pequeno">
   Primera versión de prueba. Los datos se guardan
   en el almacenamiento local del navegador.
@@ -161,6 +172,30 @@ document.getElementById("formulario")
   });
 
 dibujar();
+ const botonExportar = document.getElementById("exportarCopia");
+const textoCopia = document.getElementById("textoCopia");
+
+botonExportar.addEventListener("click", () => {
+  try {
+    const datos = localStorage.getItem("mi-despensa-productos-v1");
+
+    if (datos === null) {
+      textoCopia.value = "No se encontraron datos guardados.";
+      return;
+    }
+
+    textoCopia.value = JSON.stringify({
+      version: 1,
+      productos: JSON.parse(datos)
+    }, null, 2);
+
+    textoCopia.focus();
+    textoCopia.select();
+  } catch (error) {
+    textoCopia.value =
+      "No se pudo preparar la copia. Tus productos no se han borrado.";
+  }
+}); 
 </script>
 
 function exportarCopia() {
