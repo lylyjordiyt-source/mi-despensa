@@ -159,6 +159,36 @@ document.getElementById("formulario")
 
 dibujar();
 </script>
+function exportarCopia() {
+  const copia = {
+    version: 1,
+    fecha: new Date().toISOString(),
+    productos: JSON.parse(
+      localStorage.getItem("mi-despensa-productos-v1") || "[]"
+    )
+  };
+
+  const archivo = new Blob(
+    [JSON.stringify(copia, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = URL.createObjectURL(archivo);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = "copia-mi-despensa.json";
+  enlace.click();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const botonCopia = document.createElement("button");
+botonCopia.textContent = "💾 Exportar copia de seguridad";
+botonCopia.style.width = "100%";
+botonCopia.style.margin = "10px 0";
+botonCopia.addEventListener("click", exportarCopia);
+
+document.querySelector("body").appendChild(botonCopia);  
 
 <script>
 if ("serviceWorker" in navigator) {
