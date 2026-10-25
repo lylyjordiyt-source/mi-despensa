@@ -64,6 +64,16 @@ form button{width:100%}
     readonly
     placeholder="Tu copia aparecerá aquí"></textarea>
 </section>
+  <section class="panel">
+  <h2>📥 Recuperar mis productos</h2>
+  <textarea id="textoImportar"
+    rows="8"
+    placeholder="Pega aquí la copia guardada en Notas"></textarea>
+  <button type="button" id="importarCopia">
+    Importar productos
+  </button>
+  <p id="estadoImportacion" class="pequeno"></p>
+</section>
 
 <p class="pequeno">
   Primera versión de prueba. Los datos se guardan
@@ -195,7 +205,60 @@ botonExportar.addEventListener("click", () => {
     textoCopia.value =
       "No se pudo preparar la copia. Tus productos no se han borrado.";
   }
-}); 
+});
+  
+const botonImportar = document.getElementById("importarCopia");
+const textoImportar = document.getElementById("textoImportar");
+const estadoImportacion = document.getElementById("estadoImportacion");
+
+botonImportar.addEventListener("click", () => {
+  try {
+    const copia = JSON.parse(textoImportar.value);
+    const nuevos = Array.isArray(copia) ? copia : copia.productos;
+
+    if (!Array.isArray(nuevos) || nuevos.some(p =>
+      !p ||
+      typeof p.nombre !== "string" ||
+      !Number.isFinite(Number(p.cantidad)) ||
+      Number(p.cantidad) < 0
+    )) {
+      throw new Error("Formato no válido");
+    }
+
+    const actuales = JSON.parse(
+      localStorage.getItem("mi-despensa-productos-v1") || "[]"
+    );
+
+    if (!Array.isArray(actuales)) {
+      throw new Error("Inventario actual no válido");
+    }
+
+    if (actuales.length > 0) {
+      estadoImportacion.textContent =
+        "El inventario ya contiene productos. No se ha importado nada para evitar sobrescribirlos.";
+      return;
+    }
+
+    productos = nuevos.map(p => ({
+      id: p.id || crypto.randomUUID(),
+      nombre: p.nombre,
+      cantidad: Number(p.cantidad)
+    }));
+
+    localStorage.setItem(
+      "mi-despensa-productos-v1",
+      JSON.stringify(productos)
+    );
+
+    dibujar();
+    estadoImportacion.textContent =
+      "¡Importación completada! Productos recuperados: " + productos.length;
+  } catch (error) {
+    estadoImportacion.textContent =
+      "La copia no es válida o no se ha podido leer. No se ha importado nada.";
+  }
+});
+
 </script>
 
 function exportarCopia() {
