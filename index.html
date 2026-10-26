@@ -207,6 +207,7 @@ botonExportar.addEventListener("click", () => {
   }
 });
   
+
 const botonImportar = document.getElementById("importarCopia");
 const textoImportar = document.getElementById("textoImportar");
 const estadoImportacion = document.getElementById("estadoImportacion");
@@ -226,47 +227,51 @@ botonImportar.addEventListener("click", () => {
     }
 
     const actuales = JSON.parse(
-      localStorage.getItem("mi-despensa-productos-v1") || "[]"
+      localStorage.getItem(CLAVE) || "[]"
     );
 
     if (!Array.isArray(actuales)) {
       throw new Error("Inventario actual no válido");
     }
 
-    
-const nombresActuales = new Set(
-  actuales.map(p => p.nombre.trim().toLowerCase())
-);
+    const nombresActuales = new Set(
+      actuales.map(p => p.nombre.trim().toLowerCase())
+    );
 
-const paraAñadir = nuevos.filter(p =>
-  !nombresActuales.has(p.nombre.trim().toLowerCase())
-);
+    const paraAñadir = nuevos.filter(p =>
+      !nombresActuales.has(p.nombre.trim().toLowerCase())
+    );
 
-const confirmacion = confirm(
-  "Se añadirán " + paraAñadir.length +
-  " productos nuevos. Los que ya existen se conservarán sin cambios. ¿Continuar?"
-);
+    if (!confirm(
+      "Se añadirán " + paraAñadir.length +
+      " productos nuevos. Los que ya existen se conservarán. ¿Continuar?"
+    )) return;
 
-if (!confirmacion) return;
+    productos = [
+      ...actuales,
+      ...paraAñadir.map(p => ({
+        id: p.id && !actuales.some(a => a.id === p.id)
+          ? p.id
+          : crypto.randomUUID(),
+        nombre: p.nombre.trim(),
+        cantidad: Number(p.cantidad)
+      }))
+    ];
 
-productos = [
-  ...actuales,
-  ...paraAñadir.map(p => ({
-    id: p.id && !actuales.some(a => a.id === p.id)
-      ? p.id
-      : crypto.randomUUID(),
-    nombre: p.nombre,
-    cantidad: Number(p.cantidad)
-  }))
-];
+    localStorage.setItem(CLAVE, JSON.stringify(productos));
+    dibujar();
 
-localStorage.setItem(CLAVE, JSON.stringify(productos));
-dibujar();
+    estadoImportacion.textContent =
+      "Importación terminada. Productos nuevos añadidos: " +
+      paraAñadir.length + ". Los productos existentes se han conservado.";
 
-estadoImportacion.textContent =
-  "Importación terminada. Productos nuevos añadidos: " +
-  paraAñadir.length +
-  ". Los que ya existían se han conservado.";
+  } catch (error) {
+    estadoImportacion.textContent =
+      "Error al importar: comprueba que la copia esté completa y sea válida.";
+    console.error("Error de importación:", error);
+  }
+});
+
 return;
 
     }
