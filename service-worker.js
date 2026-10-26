@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "mi-despensa-v1";
+const CACHE_NAME = "mi-despensa-v2";
 
 const APP_FILES = [
   "/mi-despensa/",
