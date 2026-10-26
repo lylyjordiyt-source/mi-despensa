@@ -1,34 +1,95 @@
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <meta name="theme-color" content="#477a55">
 <link rel="manifest" href="/mi-despensa/manifest.json">
 <link rel="apple-touch-icon" href="/mi-despensa/icon-192.png">
-
 <title>Mi Despensa</title>
+
 <style>
-:root{font-family:system-ui,sans-serif;color:#20352a;background:#f5f6f0}
-body{margin:0;padding:20px;max-width:700px;margin:auto}
-header{background:#234c3b;color:white;padding:22px;border-radius:20px}
-h1{margin:0}header p{margin-bottom:0;color:#dce9df}
-.panel{background:white;padding:18px;border-radius:16px;margin:16px 0}
-input,button{font:inherit;padding:12px;border-radius:10px}
-input{border:1px solid #ccd6ce;box-sizing:border-box;width:100%;margin:6px 0 12px}
-button{border:0;background:#234c3b;color:white;font-weight:bold;cursor:pointer}
-form button{width:100%}
-.producto{padding:13px 0;border-bottom:1px solid #e1e7e0;display:flex;gap:10px;align-items:center}
-.nombre{flex:1;overflow-wrap:anywhere}
-.cantidad{font-weight:bold;white-space:nowrap}
-.acciones{display:flex;gap:5px}
-.acciones button{padding:8px 11px}
-.borrar{background:#f4e4df;color:#8b3024}
-.pequeno{font-size:13px;color:#65766a}
+:root {
+  font-family: system-ui, sans-serif;
+  color: #20352a;
+  background: #f5f6f0;
+}
+body {
+  margin: 0 auto;
+  padding: 20px;
+  max-width: 700px;
+}
+header {
+  background: #234c3b;
+  color: white;
+  padding: 22px;
+  border-radius: 20px;
+}
+h1 { margin: 0; }
+header p { margin-bottom: 0; color: #dce9df; }
+.panel {
+  background: white;
+  padding: 18px;
+  border-radius: 16px;
+  margin: 16px 0;
+}
+input, button, textarea {
+  font: inherit;
+  padding: 12px;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+input, textarea {
+  border: 1px solid #ccd6ce;
+  width: 100%;
+  margin: 6px 0 12px;
+}
+textarea {
+  display: block;
+  resize: vertical;
+  min-height: 130px;
+}
+button {
+  border: 0;
+  background: #234c3b;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+form button { width: 100%; }
+.producto {
+  padding: 13px 0;
+  border-bottom: 1px solid #e1e7e0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.nombre {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.cantidad {
+  font-weight: bold;
+  white-space: nowrap;
+}
+.acciones {
+  display: flex;
+  gap: 5px;
+}
+.acciones button { padding: 8px 11px; }
+.borrar {
+  background: #f4e4df;
+  color: #8b3024;
+}
+.pequeno {
+  font-size: 13px;
+  color: #65766a;
+}
 </style>
 </head>
+
 <body>
 <header>
   <h1>🥫 Mi Despensa</h1>
@@ -39,11 +100,11 @@ form button{width:100%}
   <h2>➕ Añadir producto</h2>
   <form id="formulario">
     <label for="nombre">Nombre del producto</label>
-    <input id="nombre" required maxlength="80"
-      placeholder="Ej. Leche">
+    <input id="nombre" required maxlength="80" placeholder="Ej. Leche">
+
     <label for="cantidad">Cantidad inicial</label>
-    <input id="cantidad" type="number" min="0"
-      step="1" value="1" required>
+    <input id="cantidad" type="number" min="0" step="1" value="1" required>
+
     <button type="submit">Guardar producto</button>
   </form>
 </section>
@@ -59,42 +120,74 @@ form button{width:100%}
   <button type="button" id="exportarCopia">
     Mostrar mis productos para copiar
   </button>
-  <textarea id="textoCopia"
-    rows="8"
-    readonly
+  <textarea id="textoCopia" rows="8" readonly
     placeholder="Tu copia aparecerá aquí"></textarea>
+  <p class="pequeno">
+    Guarda el texto de la copia en Notas para poder recuperar tus productos.
+  </p>
 </section>
-  <section class="panel">
+
+<section class="panel">
   <h2>📥 Recuperar mis productos</h2>
-  <textarea id="textoImportar"
-    rows="8"
+  <p class="pequeno">
+    Pega aquí el contenido completo de una copia de seguridad.
+  </p>
+  <textarea id="textoImportar" rows="8"
     placeholder="Pega aquí la copia guardada en Notas"></textarea>
   <button type="button" id="importarCopia">
     Importar productos
   </button>
-  <p id="estadoImportacion" class="pequeno"></p>
+  <p id="estadoImportacion" class="pequeno" aria-live="polite"></p>
 </section>
 
 <p class="pequeno">
-  Primera versión de prueba. Los datos se guardan
-  en el almacenamiento local del navegador.
+  Los datos se guardan en el almacenamiento local del navegador.
+  Haz copias de seguridad periódicamente.
 </p>
 
 <script>
-const CLAVE = "mi-despensa-productos-v1";
-let productos = [];
+"use strict";
 
-try {
-  productos = JSON.parse(localStorage.getItem(CLAVE) || "[]");
-  if (!Array.isArray(productos)) productos = [];
-} catch {
-  productos = [];
-}
+const CLAVE = "mi-despensa-productos-v1";
+
+let productos = [];
 
 const nombre = document.getElementById("nombre");
 const cantidad = document.getElementById("cantidad");
 const inventario = document.getElementById("inventario");
 const resumen = document.getElementById("resumen");
+
+const botonExportar = document.getElementById("exportarCopia");
+const textoCopia = document.getElementById("textoCopia");
+
+const botonImportar = document.getElementById("importarCopia");
+const textoImportar = document.getElementById("textoImportar");
+const estadoImportacion = document.getElementById("estadoImportacion");
+
+function cargarProductos() {
+  try {
+    const datos = localStorage.getItem(CLAVE);
+    if (datos === null) return [];
+
+    const lista = JSON.parse(datos);
+    if (!Array.isArray(lista)) return [];
+
+    return lista.filter(p =>
+      p &&
+      typeof p.id === "string" &&
+      typeof p.nombre === "string" &&
+      Number.isFinite(Number(p.cantidad)) &&
+      Number(p.cantidad) >= 0
+    ).map(p => ({
+      id: p.id,
+      nombre: p.nombre,
+      cantidad: Number(p.cantidad)
+    }));
+  } catch (error) {
+    console.error("No se pudo leer el inventario:", error);
+    return [];
+  }
+}
 
 function guardar() {
   localStorage.setItem(CLAVE, JSON.stringify(productos));
@@ -103,6 +196,7 @@ function guardar() {
 
 function boton(texto, accion, id, clase = "") {
   const b = document.createElement("button");
+  b.type = "button";
   b.textContent = texto;
   if (clase) b.className = clase;
   b.addEventListener("click", () => accion(id));
@@ -111,6 +205,7 @@ function boton(texto, accion, id, clase = "") {
 
 function dibujar() {
   inventario.replaceChildren();
+
   resumen.textContent =
     productos.length + " productos · " +
     productos.reduce((s, p) => s + p.cantidad, 0) +
@@ -149,6 +244,7 @@ function dibujar() {
 function cambiar(id, diferencia) {
   const p = productos.find(x => x.id === id);
   if (!p || p.cantidad + diferencia < 0) return;
+
   p.cantidad += diferencia;
   guardar();
 }
@@ -156,6 +252,7 @@ function cambiar(id, diferencia) {
 function borrar(id) {
   const p = productos.find(x => x.id === id);
   if (!p || !confirm("¿Eliminar " + p.nombre + "?")) return;
+
   productos = productos.filter(x => x.id !== id);
   guardar();
 }
@@ -163,11 +260,15 @@ function borrar(id) {
 document.getElementById("formulario")
   .addEventListener("submit", e => {
     e.preventDefault();
+
     const productoNombre = nombre.value.trim();
     const unidades = Number(cantidad.value);
 
-    if (!productoNombre ||
-        !Number.isInteger(unidades) || unidades < 0) return;
+    if (
+      !productoNombre ||
+      !Number.isInteger(unidades) ||
+      unidades < 0
+    ) return;
 
     productos.push({
       id: crypto.randomUUID(),
@@ -181,58 +282,45 @@ document.getElementById("formulario")
     nombre.focus();
   });
 
-dibujar();
- const botonExportar = document.getElementById("exportarCopia");
-const textoCopia = document.getElementById("textoCopia");
-
 botonExportar.addEventListener("click", () => {
   try {
-    const datos = localStorage.getItem("mi-despensa-productos-v1");
-
-    if (datos === null) {
-      textoCopia.value = "No se encontraron datos guardados.";
-      return;
-    }
+    const datos = localStorage.getItem(CLAVE);
+    const lista = datos === null ? productos : JSON.parse(datos);
 
     textoCopia.value = JSON.stringify({
       version: 1,
-      productos: JSON.parse(datos)
+      productos: lista
     }, null, 2);
 
     textoCopia.focus();
     textoCopia.select();
   } catch (error) {
-    textoCopia.value =
-      "No se pudo preparar la copia. Tus productos no se han borrado.";
+    textoCopia.value = "No se pudo preparar la copia de seguridad.";
+    console.error("Error al exportar:", error);
   }
 });
-  
-
-const botonImportar = document.getElementById("importarCopia");
-const textoImportar = document.getElementById("textoImportar");
-const estadoImportacion = document.getElementById("estadoImportacion");
 
 botonImportar.addEventListener("click", () => {
   try {
-    const copia = JSON.parse(textoImportar.value);
+    const copia = JSON.parse(textoImportar.value.trim());
     const nuevos = Array.isArray(copia) ? copia : copia.productos;
 
-    if (!Array.isArray(nuevos) || nuevos.some(p =>
-      !p ||
-      typeof p.nombre !== "string" ||
-      !Number.isFinite(Number(p.cantidad)) ||
-      Number(p.cantidad) < 0
-    )) {
-      throw new Error("Formato no válido");
+    if (
+      !Array.isArray(nuevos) ||
+      nuevos.some(p =>
+        !p ||
+        typeof p.nombre !== "string" ||
+        !p.nombre.trim() ||
+        p.nombre.trim().length > 80 ||
+        !Number.isFinite(Number(p.cantidad)) ||
+        Number(p.cantidad) < 0 ||
+        !Number.isInteger(Number(p.cantidad))
+      )
+    ) {
+      throw new Error("Formato de copia no válido");
     }
 
-    const actuales = JSON.parse(
-      localStorage.getItem(CLAVE) || "[]"
-    );
-
-    if (!Array.isArray(actuales)) {
-      throw new Error("Inventario actual no válido");
-    }
+    const actuales = cargarProductos();
 
     const nombresActuales = new Set(
       actuales.map(p => p.nombre.trim().toLowerCase())
@@ -244,66 +332,56 @@ botonImportar.addEventListener("click", () => {
 
     if (!confirm(
       "Se añadirán " + paraAñadir.length +
-      " productos nuevos. Los que ya existen se conservarán. ¿Continuar?"
+      " productos nuevos. Los que ya existen se conservarán sin cambios. ¿Continuar?"
     )) return;
 
-    productos = [
-      ...actuales,
-      ...paraAñadir.map(p => ({
-        id: p.id && !actuales.some(a => a.id === p.id)
-          ? p.id
-          : crypto.randomUUID(),
+    const idsUsados = new Set(actuales.map(p => p.id));
+
+    const importados = paraAñadir.map(p => {
+      let id = typeof p.id === "string" && p.id.trim()
+        ? p.id
+        : crypto.randomUUID();
+
+      if (idsUsados.has(id)) {
+        id = crypto.randomUUID();
+      }
+
+      idsUsados.add(id);
+
+      return {
+        id,
         nombre: p.nombre.trim(),
         cantidad: Number(p.cantidad)
-      }))
-    ];
+      };
+    });
 
-    localStorage.setItem(CLAVE, JSON.stringify(productos));
-    dibujar();
+    productos = [...actuales, ...importados];
+
+    guardar();
 
     estadoImportacion.textContent =
-      "Importación terminada. Productos nuevos añadidos: " +
-      paraAñadir.length + ". Los productos existentes se han conservado.";
-
+      "Importación completada. Productos nuevos añadidos: " +
+      importados.length +
+      ". Los productos existentes se han conservado.";
   } catch (error) {
     estadoImportacion.textContent =
-      "Error al importar: comprueba que la copia esté completa y sea válida.";
-    console.error("Error de importación:", error);
+      "Error: la copia no es válida o no se ha podido importar.";
+    console.error("Error al importar:", error);
   }
 });
 
-return;
-
-    }
-
-    productos = nuevos.map(p => ({
-      id: p.id || crypto.randomUUID(),
-      nombre: p.nombre,
-      cantidad: Number(p.cantidad)
-    }));
-
-    localStorage.setItem(
-      "mi-despensa-productos-v1",
-      JSON.stringify(productos)
-    );
-
-    dibujar();
-    estadoImportacion.textContent =
-      "¡Importación completada! Productos recuperados: " + productos.length;
-  } catch (error) {
-    estadoImportacion.textContent =
-      "La copia no es válida o no se ha podido leer. No se ha importado nada.";
-  }
-});
-
+productos = cargarProductos();
+dibujar();
 </script>
-
 
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/mi-despensa/service-worker.js")
-      .catch(error => console.error("Error al activar modo offline:", error));
+    navigator.serviceWorker
+      .register("/mi-despensa/service-worker.js")
+      .catch(error =>
+        console.error("Error al activar modo offline:", error)
+      );
   });
 }
 </script>
