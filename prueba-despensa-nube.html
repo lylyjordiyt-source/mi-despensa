@@ -1,0 +1,401 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#477a55">
+<title>Mi Despensa · Nube</title>
+<style>
+:root {
+  font-family: system-ui, sans-serif;
+  color: #20352a;
+  background: #f5f6f0;
+}
+body { margin: 0 auto; padding: 16px; max-width: 700px; }
+header { background: #234c3b; color: white; padding: 22px; border-radius: 20px; }
+header p { color: #dce9df; margin-bottom: 0; }
+.panel { background: white; padding: 18px; border-radius: 16px; margin: 16px 0; }
+input, button, textarea { font: inherit; padding: 12px; border-radius: 10px; box-sizing: border-box; }
+input, textarea { border: 1px solid #ccd6ce; width: 100%; margin: 6px 0 12px; }
+textarea { min-height: 120px; }
+button { border: 0; background: #234c3b; color: white; font-weight: bold; cursor: pointer; }
+form button, .ancho { width: 100%; }
+button:disabled { opacity: .5; }
+.producto { padding: 13px 0; border-bottom: 1px solid #e1e7e0; display: flex; gap: 9px; align-items: center; }
+.nombre { flex: 1; overflow-wrap: anywhere; }
+.cantidad { font-weight: bold; white-space: nowrap; }
+.acciones { display: flex; gap: 5px; }
+.acciones button { padding: 8px 11px; }
+.borrar { background: #f4e4df; color: #8b3024; }
+.pequeno { font-size: 13px; color: #65766a; }
+#estado { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🥫 Mi Despensa</h1>
+  <p>Tu inventario de casa, bajo control.</p>
+</header>
+
+<section class="panel">
+  <h2>☁️ Tu cuenta</h2>
+  <form id="login">
+    <label for="email">Correo electrónico</label>
+    <input id="email" type="email" autocomplete="email" required>
+    <label for="password">Contraseña de Supabase</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Iniciar sesión</button>
+  </form>
+  <button id="salir" type="button">Cerrar sesión</button>
+  <p id="estado" aria-live="polite">Conectando…</p>
+  <button id="recargar" class="ancho" type="button" disabled>Actualizar inventario</button>
+</section>
+
+<section class="panel">
+  <h2>➕ Añadir producto</h2>
+  <form id="formulario">
+    <label for="nombre">Nombre del producto</label>
+    <input id="nombre" maxlength="80" placeholder="Ej. Leche" required>
+    <label for="cantidad">Cantidad inicial</label>
+    <input id="cantidad" type="number" min="0" step="1" value="1" required>
+    <button type="submit">Guardar producto en la nube</button>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>📦 Mi inventario</h2>
+  <p id="resumen" class="pequeno"></p>
+  <div id="inventario">Inicia sesión para cargar los productos.</div>
+</section>
+
+<section class="panel">
+  <h2>💾 Copia de seguridad</h2>
+  <button id="exportar" class="ancho" type="button">Preparar copia</button>
+  <textarea id="copia" readonly placeholder="La copia aparecerá aquí"></textarea>
+  <p class="pequeno">Guarda el texto en Notas para poder recuperarlo.</p>
+</section>
+
+<section class="panel">
+  <h2>📥 Importar copia</h2>
+  <textarea id="importar" placeholder="Pega aquí una copia de seguridad"></textarea>
+  <button id="importarBtn" class="ancho" type="button">Importar productos nuevos</button>
+  <p id="estadoImportacion" class="pequeno" aria-live="polite"></p>
+</section>
+
+<p class="pequeno">Prueba independiente. Tu index.html original no se modifica.</p>
+
+<script type="module">
+import { createClient } from
+  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+const URL_SUPABASE = "https://wfbhrqlmfhjnjmdzeodi.supabase.co";
+const CLAVE_PUBLICA = "sb_publishable_6h-DRmPa61Jw8XVBfqLbyw_Uxbtzjl8";
+const supabase = createClient(URL_SUPABASE, CLAVE_PUBLICA);
+
+const $ = id => document.getElementById(id);
+let usuario = null;
+let productos = [];
+let ocupada = false;
+
+function mensaje(texto) {
+  $("estado").textContent = texto;
+}
+
+function bloquear(valor) {
+  ocupada = valor;
+  $("recargar").disabled = valor || !usuario;
+  $("formulario").querySelector("button").disabled = valor || !usuario;
+  $("importarBtn").disabled = valor || !usuario;
+  $("inventario").querySelectorAll("button").forEach(b => b.disabled = valor);
+}
+
+function dibujar() {
+  const zona = $("inventario");
+  zona.replaceChildren();
+  $("resumen").textContent =
+    productos.length + " productos · " +
+    productos.reduce((s, p) => s + p.cantidad, 0) + " unidades en total";
+
+  if (!productos.length) {
+    zona.textContent = "Todavía no hay productos activos.";
+    return;
+  }
+
+  for (const p of productos) {
+    const fila = document.createElement("div");
+    fila.className = "producto";
+
+    const nombre = document.createElement("div");
+    nombre.className = "nombre";
+    nombre.textContent = p.nombre;
+
+    const cantidad = document.createElement("span");
+    cantidad.className = "cantidad";
+    cantidad.textContent = p.cantidad + " ud.";
+
+    const acciones = document.createElement("div");
+    acciones.className = "acciones";
+
+    function boton(texto, clase, accion) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = texto;
+      if (clase) b.className = clase;
+      b.addEventListener("click", accion);
+      acciones.append(b);
+    }
+
+    boton("−", "", () => cambiar(p, -1));
+    boton("+", "", () => cambiar(p, 1));
+    boton("×", "borrar", () => eliminar(p));
+
+    fila.append(nombre, cantidad, acciones);
+    zona.append(fila);
+  }
+}
+
+async function cargar() {
+  if (!usuario || ocupada) return;
+  bloquear(true);
+  mensaje("Consultando inventario en la nube…");
+
+  try {
+    const { data, error } = await supabase
+      .from("productos")
+      .select("id,nombre,cantidad,actualizado_en,eliminado_en")
+      .eq("user_id", usuario.id)
+      .order("nombre");
+
+    if (error) throw error;
+
+    productos = data
+      .filter(p => p.eliminado_en === null)
+      .map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        cantidad: Number(p.cantidad)
+      }));
+
+    dibujar();
+    mensaje("Conectado. Inventario cargado desde Supabase.");
+  } catch (e) {
+    mensaje("No se pudo cargar el inventario: " + e.message);
+  } finally {
+    bloquear(false);
+  }
+}
+
+async function cambiar(p, diferencia) {
+  if (ocupada || !usuario || p.cantidad + diferencia < 0) return;
+  const anterior = p.cantidad;
+  p.cantidad += diferencia;
+  dibujar();
+  bloquear(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("productos")
+      .update({ cantidad: p.cantidad })
+      .eq("id", p.id)
+      .eq("user_id", usuario.id)
+      .is("eliminado_en", null)
+      .select("id");
+
+    if (error) throw error;
+    if (!data.length) throw new Error("No se encontró el producto activo en tu cuenta.");
+    mensaje("Cantidad guardada en la nube.");
+  } catch (e) {
+    p.cantidad = anterior;
+    mensaje("No se guardó el cambio: " + e.message);
+  } finally {
+    dibujar();
+    bloquear(false);
+  }
+}
+
+async function eliminar(p) {
+  if (ocupada || !usuario ||
+      !confirm("¿Eliminar " + p.nombre + "?")) return;
+
+  bloquear(true);
+  try {
+    const { data, error } = await supabase
+      .from("productos")
+      .update({ eliminado_en: new Date().toISOString() })
+      .eq("id", p.id)
+      .eq("user_id", usuario.id)
+      .is("eliminado_en", null)
+      .select("id");
+
+    if (error) throw error;
+    if (!data.length) throw new Error("No se encontró el producto activo.");
+
+    productos = productos.filter(x => x.id !== p.id);
+    dibujar();
+    mensaje("Producto eliminado y marcado en la nube.");
+  } catch (e) {
+    mensaje("No se pudo eliminar: " + e.message);
+  } finally {
+    bloquear(false);
+  }
+}
+
+$("login").addEventListener("submit", async e => {
+  e.preventDefault();
+  mensaje("Iniciando sesión…");
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: $("email").value.trim(),
+    password: $("password").value
+  });
+
+  if (error) {
+    mensaje("Error de acceso: " + error.message);
+    return;
+  }
+
+  $("password").value = "";
+  usuario = data.user;
+  await cargar();
+});
+
+$("salir").addEventListener("click", async () => {
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    mensaje("No se pudo cerrar sesión: " + error.message);
+    return;
+  }
+  usuario = null;
+  productos = [];
+  dibujar();
+  mensaje("Sesión cerrada.");
+  $("recargar").disabled = true;
+});
+
+$("recargar").addEventListener("click", cargar);
+
+$("formulario").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!usuario || ocupada) return;
+
+  const nombre = $("nombre").value.trim();
+  const cantidad = Number($("cantidad").value);
+  if (!nombre || nombre.length > 80 ||
+      !Number.isInteger(cantidad) || cantidad < 0) return;
+
+  bloquear(true);
+  try {
+    const nuevo = {
+      id: crypto.randomUUID(),
+      nombre,
+      cantidad,
+      user_id: usuario.id
+    };
+
+    const { error } = await supabase.from("productos").insert(nuevo);
+    if (error) throw error;
+
+    $("formulario").reset();
+    $("cantidad").value = "1";
+    await cargar();
+    mensaje("Producto guardado en la nube.");
+  } catch (e) {
+    mensaje("No se pudo guardar: " + e.message);
+  } finally {
+    bloquear(false);
+  }
+});
+
+$("exportar").addEventListener("click", () => {
+  $("copia").value = JSON.stringify({
+    version: 1,
+    productos
+  }, null, 2);
+  $("copia").focus();
+  $("copia").select();
+});
+
+$("importarBtn").addEventListener("click", async () => {
+  if (!usuario || ocupada) return;
+  let nuevos;
+
+  try {
+    const copia = JSON.parse($("importar").value.trim());
+    const lista = Array.isArray(copia) ? copia : copia.productos;
+    if (!Array.isArray(lista)) throw new Error("La copia no contiene una lista.");
+
+    nuevos = lista.map(p => {
+      if (!p || typeof p.nombre !== "string" ||
+          !p.nombre.trim() || p.nombre.trim().length > 80 ||
+          !Number.isInteger(Number(p.cantidad)) || Number(p.cantidad) < 0) {
+        throw new Error("Hay productos con datos no válidos.");
+      }
+      return {
+        id: typeof p.id === "string" && p.id.trim()
+          ? p.id : crypto.randomUUID(),
+        nombre: p.nombre.trim(),
+        cantidad: Number(p.cantidad)
+      };
+    });
+
+    if (new Set(nuevos.map(p => p.id)).size !== nuevos.length) {
+      throw new Error("La copia contiene identificadores repetidos.");
+    }
+  } catch (e) {
+    $("estadoImportacion").textContent = "Copia no válida: " + e.message;
+    return;
+  }
+
+  bloquear(true);
+  try {
+    const { data: actuales, error: consultaError } = await supabase
+      .from("productos")
+      .select("id,nombre,eliminado_en")
+      .eq("user_id", usuario.id);
+
+    if (consultaError) throw consultaError;
+
+    const ids = new Set(actuales.map(p => p.id));
+    const nombres = new Set(
+      actuales.filter(p => p.eliminado_en === null)
+        .map(p => p.nombre.trim().toLowerCase())
+    );
+
+    const paraSubir = nuevos.filter(p =>
+      !ids.has(p.id) && !nombres.has(p.nombre.trim().toLowerCase())
+    );
+
+    if (!confirm("Se añadirán " + paraSubir.length +
+        " productos nuevos. Los existentes no cambiarán. ¿Continuar?")) return;
+
+    if (paraSubir.length) {
+      const filas = paraSubir.map(p => ({ ...p, user_id: usuario.id }));
+      const { error } = await supabase.from("productos").insert(filas);
+      if (error) throw error;
+    }
+
+    $("estadoImportacion").textContent =
+      "Importación terminada. Productos añadidos: " + paraSubir.length + ".";
+    await cargar();
+  } catch (e) {
+    $("estadoImportacion").textContent = "Error al importar: " + e.message;
+  } finally {
+    bloquear(false);
+  }
+});
+
+const { data: sesionInicial, error: errorSesion } =
+  await supabase.auth.getSession();
+
+if (errorSesion) {
+  mensaje("Error de sesión: " + errorSesion.message);
+} else if (sesionInicial.session) {
+  usuario = sesionInicial.session.user;
+  await cargar();
+} else {
+  mensaje("Inicia sesión para cargar tus productos.");
+}
+</script>
+</body>
+</html>
